@@ -1,0 +1,36 @@
+/* Remix's css() mixins live in the `rmx` layer; keep them above Tailwind's base, below its utilities. */
+@layer theme, base, rmx, components, utilities;
+
+@import 'tailwindcss' source('../');
+
+/* App design tokens. Pages use them as Tailwind colors, e.g. `bg-surface-0` or `text-fg-muted`. */
+:root {
+  --surface-0: #dee2e6;
+  --surface-3: #f0f4f7;
+  --surface-4: #f7fbff;
+  --fg: #313539;
+  --fg-muted: #94989c;
+  --danger: #c92a2a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-0: #1e2226;
+    --surface-3: #313539;
+    --surface-4: #363a3e;
+    --fg: #dee2e6;
+    --fg-muted: #94989c;
+    --danger: #ff8787;
+  }
+}
+
+@theme inline {
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  --color-surface-0: var(--surface-0);
+  --color-surface-3: var(--surface-3);
+  --color-surface-4: var(--surface-4);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-danger: var(--danger);
+  --color-brand: #2dacf9;
+}

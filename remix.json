@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/remix/schema/remix.json",
+  "db": {
+    "adapter": {
+      "type": "sqlite",
+      "filename": "./db/app.sqlite",
+      "foreignKeys": true
+    },
+    "migrations": {
+      "directory": "./db/migrations"
+    }
+  },
+  "test": {
+    "coverage": {
+      "enabled": false,
+      "include": ["app/**"],
+      "exclude": ["app/**/*.test*"],
+      "statements": 95,
+      "lines": 95,
+      "branches": 90,
+      "functions": 90
+    }
+  }
+}
