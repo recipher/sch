@@ -33,15 +33,17 @@ function AuthNav(handle: Handle<{ user: CurrentUser | null }>) {
     return (
       <nav aria-label="Account" class="absolute top-0 right-0 flex items-center gap-2 p-4 sm:p-6">
         {user ? (
-          <a href={routes.account.href()} class={navPillClass}>
-            Your account
-          </a>
+          <>
+            <a href={routes.clients.index.href()} class={navLinkClass}>
+              Clients
+            </a>
+            <a href={routes.account.href()} class={navPillClass}>
+              Your account
+            </a>
+          </>
         ) : (
           <>
-            <a
-              href={routes.login.index.href()}
-              class="rounded-xl px-4 py-2 font-bold transition-colors hover:bg-surface-3 hover:text-brand focus-visible:outline-2 focus-visible:outline-brand"
-            >
+            <a href={routes.login.index.href()} class={navLinkClass}>
               Log in
             </a>
             <a href={routes.signup.index.href()} class={navPillClass}>
@@ -53,6 +55,9 @@ function AuthNav(handle: Handle<{ user: CurrentUser | null }>) {
     )
   }
 }
+
+const navLinkClass =
+  'rounded-xl px-4 py-2 font-bold transition-colors hover:bg-surface-3 hover:text-brand focus-visible:outline-2 focus-visible:outline-brand'
 
 const navPillClass =
   'rounded-xl bg-fg px-4 py-2 font-bold text-surface-3 transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand'
