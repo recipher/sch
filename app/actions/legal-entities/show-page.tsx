@@ -2,12 +2,14 @@ import type { Handle } from 'remix/component'
 import type { Issue } from 'remix/data-schema'
 
 import { routes } from '../../routes.ts'
+import { currentYear } from '../../scheduling/calendar-date.ts'
 import type { Client, LegalEntity } from '../../scheduling/parties.ts'
 import type { Payroll } from '../../scheduling/payrolls.ts'
 import { AppPage, emptyClass, Section, tableClass } from '../../ui/app-page.tsx'
 import { TextField } from '../../ui/form-field.tsx'
 import { formatLocation, formatPayDayRule, formatPayFrequency } from '../../ui/format.ts'
 import { alertClass, buttonClass, fieldClass, formClass, inputClass, labelClass, linkClass } from '../../ui/page-card.tsx'
+import { holidayCalendarHref } from '../holiday-calendars/href.ts'
 
 export interface LegalEntityPageProps {
   csrfToken: string
@@ -35,7 +37,10 @@ export function LegalEntityPage(handle: Handle<LegalEntityPageProps>) {
           <a class={linkClass} href={routes.countries.show.href({ country: legalEntity.location.country })}>
             {formatLocation({ country: legalEntity.location.country })}
           </a>
-          {legalEntity.location.region && ` (${legalEntity.location.region})`}
+          {legalEntity.location.region && ` (${legalEntity.location.region})`} ·{' '}
+          <a class={linkClass} href={holidayCalendarHref(legalEntity.location, currentYear())}>
+            Holiday calendar
+          </a>
         </p>
         <Section title="Payrolls">
           {payrolls.length === 0 ? (

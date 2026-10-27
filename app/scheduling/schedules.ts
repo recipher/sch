@@ -1,13 +1,15 @@
 import type { Database } from 'remix/data-table'
 
 import { payRuns, schedules } from '../data/tables.ts'
+import { yearOf } from './calendar-date.ts'
 import type { CalendarDate } from './calendar-date.ts'
+import type { HolidaySource } from './holiday-source.ts'
+import { ensureHolidayCalendarsImported, loadWorkingDays } from './holiday-calendars.ts'
+import type { MissingHolidayCalendar } from './holiday-calendars.ts'
+import { findLegalEntity } from './parties.ts'
 import { choosePayDay, payPeriod, payPeriodsStartingIn } from './pay-periods.ts'
 import type { GenerationRange, PayPeriod } from './pay-periods.ts'
-import { findLegalEntity } from './parties.ts'
 import { findPayroll } from './payrolls.ts'
-import { isWorkingDay } from './working-days.ts'
-import { findWorkingWeek } from './working-weeks.ts'
 
 export type ScheduleStatus = 'draft'
 
@@ -22,8 +24,18 @@ export interface PayRun {
   schedule: Schedule | null
 }
 
+export type GenerationResult =
+  | { generated: true }
+  | { generated: false; missingHolidayCalendars: MissingHolidayCalendar[] }
+
 // Creates or replaces the draft schedule of every pay run whose pay period starts in the range.
-export async function generateSchedules(db: Database, payrollId: string, range: GenerationRange): Promise<void> {
+// Missing holiday calendars are imported first; if any can't be, nothing is generated.
+export async function generateSchedules(
+  db: Database,
+  holidaySource: HolidaySource,
+  payrollId: string,
+  range: GenerationRange,
+): Promise<GenerationResult> {
   if (range.end < range.start) throw new Error('The generation range ends before it starts')
 
   let payroll = await findPayroll(db, payrollId)
@@ -31,9 +43,20 @@ export async function generateSchedules(db: Database, payrollId: string, range: 
   let legalEntity = await findLegalEntity(db, payroll.legalEntityId)
   if (!legalEntity) throw new Error(`Legal entity ${payroll.legalEntityId} not found`)
 
-  // Pay day always follows the legal entity's location.
-  let workingWeek = await findWorkingWeek(db, legalEntity.location.country)
   let payPeriods = payPeriodsStartingIn(payroll.payFrequency, range)
+  if (payPeriods.length === 0) return { generated: true }
+
+  let years = yearsCovered(payPeriods)
+  let missingHolidayCalendars = await ensureHolidayCalendarsImported(
+    db,
+    holidaySource,
+    legalEntity.location.country,
+    years,
+  )
+  if (missingHolidayCalendars.length > 0) return { generated: false, missingHolidayCalendars }
+
+  // Pay day always follows the legal entity's location.
+  let isWorkingDay = await loadWorkingDays(db, legalEntity.location, years)
 
   await db.transaction(async (tx) => {
     for (let payPeriod of payPeriods) {
@@ -58,11 +81,19 @@ export async function generateSchedules(db: Database, payrollId: string, range: 
         id: crypto.randomUUID(),
         pay_run_id: payRun.id,
         status: 'draft',
-        pay_day: choosePayDay(payroll.payDayRule, payPeriod, (date) => isWorkingDay(workingWeek, date)),
+        pay_day: choosePayDay(payroll.payDayRule, payPeriod, isWorkingDay),
         created_at: Date.now(),
       })
     }
   })
+
+  return { generated: true }
+}
+
+function yearsCovered(payPeriods: PayPeriod[]): number[] {
+  let first = yearOf(payPeriods[0].start)
+  let last = yearOf(payPeriods[payPeriods.length - 1].end)
+  return Array.from({ length: last - first + 1 }, (_, index) => first + index)
 }
 
 export async function listPayRuns(db: Database, payrollId: string): Promise<PayRun[]> {

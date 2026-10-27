@@ -9,6 +9,14 @@ export function isCalendarDate(value: string): value is CalendarDate {
   return !Number.isNaN(date.getTime()) && fromUtc(date) === value
 }
 
+export function yearOf(date: CalendarDate): number {
+  return Number(date.slice(0, 4))
+}
+
+export function currentYear(): number {
+  return new Date().getUTCFullYear()
+}
+
 export function addDays(date: CalendarDate, days: number): CalendarDate {
   let utc = toUtc(date)
   utc.setUTCDate(utc.getUTCDate() + days)

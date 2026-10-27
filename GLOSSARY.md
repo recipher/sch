@@ -59,6 +59,10 @@ _Avoid_: Bank holiday, holiday, day off
 The set of public holidays that apply to a country or region, initially imported and then kept and edited locally.
 _Avoid_: Holiday list, calendar (on its own)
 
+**Holiday Calendar Edit**:
+A local addition or removal of a public holiday for a whole country or one region, which survives a re-sync of the holiday calendar.
+_Avoid_: Local edit, manual holiday, adjustment
+
 **Holiday Override**:
 A party-specific change to the holiday calendar of one of its locations, adding or removing a non-working day for that party only.
 _Avoid_: Custom holiday, exception

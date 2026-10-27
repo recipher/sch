@@ -4,6 +4,7 @@ import { createRequestListener } from 'remix/node-fetch-server'
 import { migrateDatabase, openDatabase } from './app/data/db.ts'
 import { createSessionCookie, createSessionStorage } from './app/middleware/session.ts'
 import { createAppRouter } from './app/router.ts'
+import { createHolidayApiSource } from './app/scheduling/holiday-api.ts'
 
 const port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 44100
 const hmrProxyPort = process.env.HMR_PROXY_PORT
@@ -16,6 +17,7 @@ await migrateDatabase(db)
 
 const router = createAppRouter({
   db,
+  holidaySource: createHolidayApiSource({ apiKey: process.env.HOLIDAY_API_KEY }),
   sessionCookie: createSessionCookie(),
   sessionStorage: createSessionStorage(),
 })
