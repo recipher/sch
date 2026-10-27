@@ -1,8 +1,9 @@
 import { dayOfWeek } from './calendar-date.ts'
 import type { CalendarDate } from './calendar-date.ts'
+import { daysOfWeek } from './working-weeks.ts'
+import type { WorkingWeek } from './working-weeks.ts'
 
-// Monday to Friday everywhere for now. Working weeks per country (#4) and public holidays (#3) are still to come.
-export function isWorkingDay(date: CalendarDate): boolean {
-  let day = dayOfWeek(date)
-  return day >= 1 && day <= 5
+// Public holidays (#3) are still to come, so for now any day in the working week is a working day.
+export function isWorkingDay(workingWeek: WorkingWeek, date: CalendarDate): boolean {
+  return workingWeek.days.includes(daysOfWeek[dayOfWeek(date)])
 }

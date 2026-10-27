@@ -35,15 +35,18 @@ export function createClient(router: Fetcher) {
     },
     // Loads the page holding the form first and sends its hidden fields (CSRF token included)
     // along with `fields`, as a browser would.
-    async submit(formPath: string, action: string, fields: Record<string, string>) {
+    // An array value sends the field once per item, as checkboxes sharing a name do.
+    async submit(formPath: string, action: string, fields: Record<string, string | string[]>) {
       let page = await send(formPath)
       let hidden = readHiddenFields(await page.text())
       assert.ok(hidden._csrf, `Expected a CSRF token on ${formPath}`)
       return this.post(action, { ...hidden, ...fields })
     },
-    post(path: string, fields: Record<string, string>) {
+    post(path: string, fields: Record<string, string | string[]>) {
       let body = new FormData()
-      for (let [name, value] of Object.entries(fields)) body.set(name, value)
+      for (let [name, value] of Object.entries(fields)) {
+        for (let item of [value].flat()) body.append(name, item)
+      }
       return send(path, { method: 'POST', body })
     },
   }

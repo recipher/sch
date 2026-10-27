@@ -30,7 +30,13 @@ export function LegalEntityPage(handle: Handle<LegalEntityPageProps>) {
           { label: client.name, href: routes.clients.show.href({ clientId: client.id }) },
         ]}
       >
-        <p>Location: {formatLocation(legalEntity.location)}</p>
+        <p>
+          Location:{' '}
+          <a class={linkClass} href={routes.countries.show.href({ country: legalEntity.location.country })}>
+            {formatLocation({ country: legalEntity.location.country })}
+          </a>
+          {legalEntity.location.region && ` (${legalEntity.location.region})`}
+        </p>
         <Section title="Payrolls">
           {payrolls.length === 0 ? (
             <p class={emptyClass}>No payrolls yet.</p>

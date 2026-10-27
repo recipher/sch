@@ -4,8 +4,10 @@ import { payRuns, schedules } from '../data/tables.ts'
 import type { CalendarDate } from './calendar-date.ts'
 import { choosePayDay, payPeriod, payPeriodsStartingIn } from './pay-periods.ts'
 import type { GenerationRange, PayPeriod } from './pay-periods.ts'
+import { findLegalEntity } from './parties.ts'
 import { findPayroll } from './payrolls.ts'
 import { isWorkingDay } from './working-days.ts'
+import { findWorkingWeek } from './working-weeks.ts'
 
 export type ScheduleStatus = 'draft'
 
@@ -26,7 +28,11 @@ export async function generateSchedules(db: Database, payrollId: string, range: 
 
   let payroll = await findPayroll(db, payrollId)
   if (!payroll) throw new Error(`Payroll ${payrollId} not found`)
+  let legalEntity = await findLegalEntity(db, payroll.legalEntityId)
+  if (!legalEntity) throw new Error(`Legal entity ${payroll.legalEntityId} not found`)
 
+  // Pay day always follows the legal entity's location.
+  let workingWeek = await findWorkingWeek(db, legalEntity.location.country)
   let payPeriods = payPeriodsStartingIn(payroll.payFrequency, range)
 
   await db.transaction(async (tx) => {
@@ -52,7 +58,7 @@ export async function generateSchedules(db: Database, payrollId: string, range: 
         id: crypto.randomUUID(),
         pay_run_id: payRun.id,
         status: 'draft',
-        pay_day: choosePayDay(payroll.payDayRule, payPeriod, isWorkingDay),
+        pay_day: choosePayDay(payroll.payDayRule, payPeriod, (date) => isWorkingDay(workingWeek, date)),
         created_at: Date.now(),
       })
     }
