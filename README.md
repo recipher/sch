@@ -19,6 +19,14 @@ A minimal Remix application starter with a home page.
 - Add directories like `app/data/` or `test/` when the app actually needs them.
 - Move shared UI into `app/ui/` once more than one route needs it.
 
+## Configuration
+
+Public holidays are imported from [Holiday API](https://holidayapi.com). Set `HOLIDAY_API_KEY` in the environment before starting the server; the States & Provinces plan is needed for regional holidays. Without a key, schedule generation is blocked and names the missing holiday calendars. Never commit the key.
+
+```sh
+HOLIDAY_API_KEY=your-key npm run dev
+```
+
 ## Commands
 
 ```sh

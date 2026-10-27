@@ -37,6 +37,12 @@ export const routes = route({
     addLocation: post('/service-centres/:serviceCentreId/locations'),
     removeLocation: post('/service-centres/:serviceCentreId/locations/:locationId/remove'),
   },
+  holidayCalendars: {
+    show: get('/holiday-calendars/:country'),
+    addPublicHoliday: post('/holiday-calendars/:country/public-holidays'),
+    removePublicHoliday: post('/holiday-calendars/:country/public-holidays/remove'),
+    resync: post('/holiday-calendars/:country/resync'),
+  },
   payrolls: {
     show: get('/payrolls/:payrollId'),
     generate: post('/payrolls/:payrollId/generate'),

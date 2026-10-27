@@ -1,0 +1,5 @@
+drop index holiday_calendar_edits_one_per_day;
+drop table holiday_calendar_edits;
+drop index imported_public_holidays_by_country_date;
+drop table imported_public_holidays;
+drop table holiday_calendar_imports;

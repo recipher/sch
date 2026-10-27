@@ -68,7 +68,9 @@ describe('payroll scheduling pages', () => {
   })
 
   it('creates a client, legal entity and payroll, then generates draft schedules', async (t) => {
-    let { router, close } = await createTestRouter()
+    let { router, close } = await createTestRouter({
+      holidays: { 'GB 2027': [{ date: '2027-03-31', name: 'Spring Day', region: null }] },
+    })
     t.after(close)
     let browser = createClient(router)
     let { payrollPath, payrollId } = await setUpPayroll(browser)
@@ -84,7 +86,25 @@ describe('payroll scheduling pages', () => {
     assert.match(html, /Monthly salaried/)
     assert.match(html, /January 2027[\s\S]*Fri 29 Jan 2027[\s\S]*Draft/)
     assert.match(html, /February 2027[\s\S]*Fri 26 Feb 2027/)
-    assert.match(html, /March 2027[\s\S]*Wed 31 Mar 2027/)
+    assert.match(html, /March 2027[\s\S]*Tue 30 Mar 2027/)
+  })
+
+  it('blocks generation and links to the holiday calendar when holiday data is missing', async (t) => {
+    let { router, close } = await createTestRouter({ holidays: { 'GB 2027': [] } })
+    t.after(close)
+    let browser = createClient(router)
+    let { payrollPath, payrollId } = await setUpPayroll(browser)
+
+    let response = await browser.submit(payrollPath, routes.payrolls.generate.href({ payrollId }), {
+      start: '2027-12-01',
+      end: '2028-01-31',
+    })
+
+    assert.equal(response.status, 422)
+    let html = await response.text()
+    assert.match(html, /role="alert"[^>]*>[\s\S]*United Kingdom 2028[\s\S]*No holiday data for GB 2028/)
+    assert.ok(html.includes(`href="${routes.holidayCalendars.show.href({ country: 'GB' }, { searchParams: { year: '2028' } })}"`))
+    assert.doesNotMatch(html, /December 2027/)
   })
 
   it('shows the legal entity location on the client page', async (t) => {

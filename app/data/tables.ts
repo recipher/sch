@@ -100,3 +100,38 @@ export const schedules = table({
     created_at: c.integer(),
   },
 })
+
+export const holidayCalendarImports = table({
+  name: 'holiday_calendar_imports',
+  columns: {
+    id: c.text(),
+    country: c.text(),
+    year: c.integer(),
+    imported_at: c.integer(),
+  },
+})
+
+export const importedPublicHolidays = table({
+  name: 'imported_public_holidays',
+  columns: {
+    id: c.text(),
+    country: c.text(),
+    import_year: c.integer(),
+    region: c.text().nullable(),
+    date: c.text(),
+    name: c.text(),
+  },
+})
+
+export const holidayCalendarEdits = table({
+  name: 'holiday_calendar_edits',
+  columns: {
+    id: c.text(),
+    country: c.text(),
+    region: c.text().nullable(),
+    date: c.text(),
+    kind: c.enum(['add', 'remove'] as const),
+    name: c.text().nullable(),
+    created_at: c.integer(),
+  },
+})

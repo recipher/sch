@@ -2,12 +2,14 @@ import type { Handle } from 'remix/component'
 import type { Issue } from 'remix/data-schema'
 
 import { routes } from '../../routes.ts'
+import { currentYear } from '../../scheduling/calendar-date.ts'
 import type { Client, LegalEntity, Provider, ServiceCentre } from '../../scheduling/parties.ts'
 import type { Payroll } from '../../scheduling/payrolls.ts'
 import { AppPage, emptyClass, Section, tableClass } from '../../ui/app-page.tsx'
 import { SelectField, TextField } from '../../ui/form-field.tsx'
 import { formatLocation, formatPayDayRule, formatPayFrequency } from '../../ui/format.ts'
 import { alertClass, buttonClass, fieldClass, formClass, inputClass, labelClass, linkClass } from '../../ui/page-card.tsx'
+import { holidayCalendarHref } from '../holiday-calendars/href.ts'
 
 export interface LegalEntityPageProps {
   csrfToken: string
@@ -34,7 +36,12 @@ export function LegalEntityPage(handle: Handle<LegalEntityPageProps>) {
           { label: client.name, href: routes.clients.show.href({ clientId: client.id }) },
         ]}
       >
-        <p>Location: {formatLocation(legalEntity.location)}</p>
+        <p>
+          Location: {formatLocation(legalEntity.location)} ·{' '}
+          <a class={linkClass} href={holidayCalendarHref(legalEntity.location, currentYear())}>
+            Holiday calendar
+          </a>
+        </p>
         <Section title="Default provider and service centre">
           <p class={emptyClass}>Payrolls use these unless they choose their own.</p>
           {defaultsError && (
