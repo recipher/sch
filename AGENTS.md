@@ -30,3 +30,17 @@ Refer to ./.agents/skills/remix/SKILL.md for the Remix mental model and how to f
 - Root `public/` contains static files served unchanged from the app root
 
 This starter intentionally begins small; add directories like `app/data/`, `app/middleware/`, `app/ui/`, and `test/` only when you need them.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues on `recipher/sch` via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Uses the default triage labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
