@@ -27,7 +27,9 @@ function lastSegment(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1)
 }
 
-async function setUpPayroll(browser: Browser) {
+const LAST_WORKING_DAY = { payDayRule: 'last-working-day', payDayOffset: '0' }
+
+async function setUpLegalEntity(browser: Browser) {
   await signUp(browser)
   let clientPath = await submitForRedirect(browser, routes.clients.index.href(), routes.clients.create.href(), {
     name: 'Acme Group',
@@ -39,12 +41,29 @@ async function setUpPayroll(browser: Browser) {
     routes.clients.createLegalEntity.href({ clientId }),
     { name: 'Acme UK Ltd', country: 'gb', region: '' },
   )
-  let legalEntityId = lastSegment(legalEntityPath)
+  return { legalEntityPath, legalEntityId: lastSegment(legalEntityPath) }
+}
+
+// The payroll form as a browser sends it: every pay day rule setting, used or not.
+function payrollFields(payDayRule: Record<string, string>) {
+  return {
+    name: 'Monthly salaried',
+    payFrequency: 'monthly',
+    payDayOffset: '',
+    payDayWeekday: '5',
+    payDayOfMonth: '',
+    payDayRoll: 'earlier',
+    ...payDayRule,
+  }
+}
+
+async function setUpPayroll(browser: Browser, payDayRule: Record<string, string> = LAST_WORKING_DAY) {
+  let { legalEntityPath, legalEntityId } = await setUpLegalEntity(browser)
   let payrollPath = await submitForRedirect(
     browser,
     legalEntityPath,
     routes.legalEntities.createPayroll.href({ legalEntityId }),
-    { name: 'Monthly salaried', payFrequency: 'monthly', payDayRule: 'last-working-day' },
+    payrollFields(payDayRule),
   )
   return { payrollPath, payrollId: lastSegment(payrollPath) }
 }
@@ -173,5 +192,85 @@ describe('payroll scheduling pages', () => {
     let response = await browser.get(routes.payrolls.show.href({ payrollId: 'missing' }))
 
     assert.equal(response.status, 404)
+  })
+  it('creates payrolls with each pay day rule and describes the rule', async (t) => {
+    let cases: [Record<string, string>, string][] = [
+      [LAST_WORKING_DAY, 'Last working day of the pay period'],
+      [
+        { payDayRule: 'last-working-day', payDayOffset: '2' },
+        'Last working day of the pay period, less 2 working days',
+      ],
+      [
+        { payDayRule: 'last-weekday', payDayWeekday: '5', payDayRoll: 'earlier' },
+        'Last Friday of the pay period, or the working day before',
+      ],
+      [
+        { payDayRule: 'fixed-date', payDayOfMonth: '25', payDayRoll: 'later' },
+        'The 25th of the pay period, or the working day after',
+      ],
+      [
+        { payDayRule: 'next-period-first-working-day', payDayOffset: '1' },
+        'First working day of the following pay period, plus 1 working day',
+      ],
+    ]
+
+    for (let [payDayRule, description] of cases) {
+      let { router, close } = await createTestRouter()
+      t.after(close)
+      let browser = createClient(router)
+      let { payrollPath } = await setUpPayroll(browser, payDayRule)
+
+      let html = await (await browser.get(payrollPath)).text()
+      assert.ok(html.includes(description), `${payDayRule.payDayRule}: expected "${description}"`)
+    }
+  })
+
+  it('pays March in April under the next pay period rule, keeping it as March\'s pay run', async (t) => {
+    let { router, close } = await createTestRouter({ holidays: { 'GB 2027': [] } })
+    t.after(close)
+    let browser = createClient(router)
+    let { payrollPath, payrollId } = await setUpPayroll(browser, {
+      payDayRule: 'next-period-first-working-day',
+      payDayOffset: '0',
+    })
+
+    await browser.submit(payrollPath, routes.payrolls.generate.href({ payrollId }), {
+      start: '2027-03-01',
+      end: '2027-03-31',
+    })
+
+    let html = await (await browser.get(payrollPath)).text()
+    assert.match(html, /March 2027[\s\S]*Thu 1 Apr 2027/)
+    assert.doesNotMatch(html, /April 2027/)
+  })
+
+  it('rejects pay day rule settings that are out of range', async (t) => {
+    let { router, close } = await createTestRouter()
+    t.after(close)
+    let browser = createClient(router)
+    let { legalEntityPath, legalEntityId } = await setUpLegalEntity(browser)
+    let action = routes.legalEntities.createPayroll.href({ legalEntityId })
+
+    let cases: [Record<string, string>, RegExp][] = [
+      [{ payDayRule: 'last-working-day', payDayOffset: '-1' }, /Enter a whole number of working days from 0 to 99/],
+      [{ payDayRule: 'next-period-first-working-day', payDayOffset: '' }, /Enter a whole number of working days from 0 to 99/],
+      [{ payDayRule: 'fixed-date', payDayOfMonth: '32' }, /Enter a day of the month from 1 to 31/],
+    ]
+
+    for (let [payDayRule, message] of cases) {
+      let response = await browser.submit(legalEntityPath, action, payrollFields(payDayRule))
+      assert.equal(response.status, 400, payDayRule.payDayRule)
+      assert.match(await response.text(), message)
+    }
+
+    let rejected = await (
+      await browser.submit(legalEntityPath, action, payrollFields({ payDayRule: 'fixed-date', payDayOfMonth: '32', payDayRoll: 'later' }))
+    ).text()
+    assert.match(rejected, /<option[^>]*value="fixed-date"[^>]*selected|<option[^>]*selected[^>]*value="fixed-date"/)
+    assert.match(rejected, /<option[^>]*value="later"[^>]*selected|<option[^>]*selected[^>]*value="later"/)
+    assert.match(rejected, /name="payDayOfMonth"[^>]*value="32"|value="32"[^>]*name="payDayOfMonth"/)
+
+    let html = await (await browser.get(legalEntityPath)).text()
+    assert.match(html, /No payrolls yet/)
   })
 })

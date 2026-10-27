@@ -41,7 +41,11 @@ export const payrolls = table({
     legal_entity_id: c.text(),
     name: c.text(),
     pay_frequency: c.enum(['monthly'] as const),
-    pay_day_rule: c.enum(['last-working-day'] as const),
+    pay_day_rule: c.enum(['last-working-day', 'last-weekday', 'fixed-date', 'next-period-first-working-day'] as const),
+    pay_day_offset: c.integer().nullable(),
+    pay_day_weekday: c.integer().nullable(),
+    pay_day_of_month: c.integer().nullable(),
+    pay_day_roll: c.enum(['earlier', 'later'] as const).nullable(),
     created_at: c.integer(),
   },
 })

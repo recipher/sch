@@ -4,10 +4,17 @@ import type { Issue } from 'remix/data-schema'
 import { routes } from '../../routes.ts'
 import { currentYear } from '../../scheduling/calendar-date.ts'
 import type { Client, LegalEntity } from '../../scheduling/parties.ts'
+import { payDayRuleKinds } from '../../scheduling/pay-periods.ts'
 import type { Payroll } from '../../scheduling/payrolls.ts'
 import { AppPage, emptyClass, Section, tableClass } from '../../ui/app-page.tsx'
-import { TextField } from '../../ui/form-field.tsx'
-import { formatLocation, formatPayDayRule, formatPayFrequency } from '../../ui/format.ts'
+import { readText, TextField } from '../../ui/form-field.tsx'
+import {
+  formatLocation,
+  formatPayDayRule,
+  formatPayDayRuleKind,
+  formatPayFrequency,
+  formatWeekday,
+} from '../../ui/format.ts'
 import { alertClass, buttonClass, fieldClass, formClass, inputClass, labelClass, linkClass } from '../../ui/page-card.tsx'
 import { holidayCalendarHref } from '../holiday-calendars/href.ts'
 
@@ -17,12 +24,40 @@ export interface LegalEntityPageProps {
   legalEntity: LegalEntity
   payrolls: Payroll[]
   name?: string
+  payDayRule?: PayDayRuleFields
   issues?: readonly Issue[]
+}
+
+// The pay day rule fields as submitted, so a rejected form keeps what was entered.
+export interface PayDayRuleFields {
+  payDayRule: string
+  payDayOffset: string
+  payDayWeekday: string
+  payDayOfMonth: string
+  payDayRoll: string
+}
+
+export function readPayDayRuleFields(formData: FormData): PayDayRuleFields {
+  return {
+    payDayRule: readText(formData, 'payDayRule'),
+    payDayOffset: readText(formData, 'payDayOffset'),
+    payDayWeekday: readText(formData, 'payDayWeekday'),
+    payDayOfMonth: readText(formData, 'payDayOfMonth'),
+    payDayRoll: readText(formData, 'payDayRoll'),
+  }
+}
+
+const defaultPayDayRule: PayDayRuleFields = {
+  payDayRule: 'last-working-day',
+  payDayOffset: '0',
+  payDayWeekday: '5',
+  payDayOfMonth: '25',
+  payDayRoll: 'earlier',
 }
 
 export function LegalEntityPage(handle: Handle<LegalEntityPageProps>) {
   return () => {
-    let { csrfToken, client, legalEntity, payrolls, name, issues = [] } = handle.props
+    let { csrfToken, client, legalEntity, payrolls, name, payDayRule = defaultPayDayRule, issues = [] } = handle.props
 
     return (
       <AppPage
@@ -92,7 +127,50 @@ export function LegalEntityPage(handle: Handle<LegalEntityPageProps>) {
                 Pay day rule
               </label>
               <select id="payroll-pay-day-rule" name="payDayRule" class={inputClass}>
-                <option value="last-working-day">{formatPayDayRule({ kind: 'last-working-day' })}</option>
+                {payDayRuleKinds.map((kind) => (
+                  <option key={kind} value={kind} selected={payDayRule.payDayRule === kind}>
+                    {formatPayDayRuleKind(kind)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <TextField
+              id="payroll-pay-day-offset"
+              name="payDayOffset"
+              label="Offset in working days (last working day and following pay period rules)"
+              value={payDayRule.payDayOffset}
+              issues={issues}
+            />
+            <div class={fieldClass}>
+              <label htmlFor="payroll-pay-day-weekday" class={labelClass}>
+                Weekday (last weekday rule)
+              </label>
+              <select id="payroll-pay-day-weekday" name="payDayWeekday" class={inputClass}>
+                {[1, 2, 3, 4, 5, 6, 0].map((weekday) => (
+                  <option key={weekday} value={String(weekday)} selected={payDayRule.payDayWeekday === String(weekday)}>
+                    {formatWeekday(weekday)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <TextField
+              id="payroll-pay-day-of-month"
+              name="payDayOfMonth"
+              label="Day of the month (fixed date rule)"
+              value={payDayRule.payDayOfMonth}
+              issues={issues}
+            />
+            <div class={fieldClass}>
+              <label htmlFor="payroll-pay-day-roll" class={labelClass}>
+                When that day is not a working day (last weekday and fixed date rules)
+              </label>
+              <select id="payroll-pay-day-roll" name="payDayRoll" class={inputClass}>
+                <option value="earlier" selected={payDayRule.payDayRoll !== 'later'}>
+                  Pay on the working day before
+                </option>
+                <option value="later" selected={payDayRule.payDayRoll === 'later'}>
+                  Pay on the working day after
+                </option>
               </select>
             </div>
             <button type="submit" class={buttonClass}>

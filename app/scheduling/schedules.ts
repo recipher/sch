@@ -7,8 +7,9 @@ import type { HolidaySource } from './holiday-source.ts'
 import { ensureHolidayCalendarsImported, loadWorkingDays } from './holiday-calendars.ts'
 import type { MissingHolidayCalendar } from './holiday-calendars.ts'
 import { findLegalEntity } from './parties.ts'
+import type { Location } from './parties.ts'
 import { choosePayDay, payPeriod, payPeriodsStartingIn } from './pay-periods.ts'
-import type { GenerationRange, PayPeriod } from './pay-periods.ts'
+import type { GenerationRange, PayDayRule, PayPeriod } from './pay-periods.ts'
 import { findPayroll } from './payrolls.ts'
 
 export type ScheduleStatus = 'draft'
@@ -46,19 +47,11 @@ export async function generateSchedules(
   let payPeriods = payPeriodsStartingIn(payroll.payFrequency, range)
   if (payPeriods.length === 0) return { generated: true }
 
-  let years = yearsCovered(payPeriods)
-  let missingHolidayCalendars = await ensureHolidayCalendarsImported(
-    db,
-    holidaySource,
-    legalEntity.location.country,
-    years,
-  )
-  if (missingHolidayCalendars.length > 0) return { generated: false, missingHolidayCalendars }
-
-  let isWorkingDay = await loadWorkingDays(db, legalEntity.location, years)
+  let payDays = await choosePayDays(db, holidaySource, legalEntity.location, payroll.payDayRule, payPeriods)
+  if (!payDays.chosen) return { generated: false, missingHolidayCalendars: payDays.missingHolidayCalendars }
 
   await db.transaction(async (tx) => {
-    for (let payPeriod of payPeriods) {
+    for (let [index, payPeriod] of payPeriods.entries()) {
       let payRun = await tx.findOne(payRuns, {
         where: { payroll_id: payroll.id, pay_period_start: payPeriod.start },
       })
@@ -80,13 +73,52 @@ export async function generateSchedules(
         id: crypto.randomUUID(),
         pay_run_id: payRun.id,
         status: 'draft',
-        pay_day: choosePayDay(payroll.payDayRule, payPeriod, isWorkingDay),
+        pay_day: payDays.payDays[index],
         created_at: Date.now(),
       })
     }
   })
 
   return { generated: true }
+}
+
+// A pay day can land in a year its pay period doesn't touch (December paid in January, or the 1st
+// of January rolled back into December), which only shows while walking working days. Each further
+// year's holiday calendar is imported as the walk reaches it.
+async function choosePayDays(
+  db: Database,
+  holidaySource: HolidaySource,
+  location: Location,
+  rule: PayDayRule,
+  payPeriods: PayPeriod[],
+): Promise<
+  { chosen: true; payDays: CalendarDate[] } | { chosen: false; missingHolidayCalendars: MissingHolidayCalendar[] }
+> {
+  let years = yearsCovered(payPeriods)
+
+  while (true) {
+    let missingHolidayCalendars = await ensureHolidayCalendarsImported(db, holidaySource, location.country, years)
+    if (missingHolidayCalendars.length > 0) return { chosen: false, missingHolidayCalendars }
+
+    let isLoadedWorkingDay = await loadWorkingDays(db, location, years)
+    let isWorkingDay = (date: CalendarDate) => {
+      if (!years.includes(yearOf(date))) throw new YearNotLoaded(yearOf(date))
+      return isLoadedWorkingDay(date)
+    }
+
+    try {
+      return { chosen: true, payDays: payPeriods.map((payPeriod) => choosePayDay(rule, payPeriod, isWorkingDay)) }
+    } catch (error) {
+      if (!(error instanceof YearNotLoaded)) throw error
+      years = [...years, error.year]
+    }
+  }
+}
+
+class YearNotLoaded extends Error {
+  constructor(readonly year: number) {
+    super(`Working days for ${year} were not loaded`)
+  }
 }
 
 function yearsCovered(payPeriods: PayPeriod[]): number[] {

@@ -6,12 +6,13 @@ import { createFakeHolidaySource } from '../../test/holiday-source.ts'
 import type { SourcedPublicHoliday } from './holiday-source.ts'
 import { createClient, createLegalEntity } from './parties.ts'
 import type { Location } from './parties.ts'
+import type { PayDayRule } from './pay-periods.ts'
 import { createPayroll } from './payrolls.ts'
 import { generateSchedules, listPayRuns } from './schedules.ts'
 
 async function setUpMonthlyPayroll(
   t: { after(fn: () => unknown): void },
-  options: { location?: Location; calendars?: Record<string, SourcedPublicHoliday[]> } = {},
+  options: { location?: Location; calendars?: Record<string, SourcedPublicHoliday[]>; payDayRule?: PayDayRule } = {},
 ) {
   let { db, close } = await createTestDatabase()
   t.after(close)
@@ -26,7 +27,7 @@ async function setUpMonthlyPayroll(
     legalEntityId: legalEntity.id,
     name: 'Monthly salaried',
     payFrequency: 'monthly',
-    payDayRule: { kind: 'last-working-day' },
+    payDayRule: options.payDayRule ?? { kind: 'last-working-day', offset: 0 },
   })
   return { db, holidays, payroll, generate: (range: { start: string; end: string }) => generateSchedules(db, holidays.source, payroll.id, range) }
 }
@@ -118,6 +119,79 @@ describe('generating schedules', () => {
     let { db, payroll, generate } = await setUpMonthlyPayroll(t, { calendars: { 'GB 2027': [] } })
 
     let result = await generate({ start: '2027-12-01', end: '2028-01-31' })
+
+    assert.deepEqual(result, {
+      generated: false,
+      missingHolidayCalendars: [{ country: 'GB', year: 2028, reason: 'No holiday data for GB 2028' }],
+    })
+    assert.deepEqual(await listPayRuns(db, payroll.id), [])
+  })
+  it('applies the pay day rule chosen for the payroll', async (t) => {
+    // Thu 25 Mar 2027 is a public holiday.
+    let calendars = { 'GB 2027': [{ date: '2027-03-25', name: 'Spring Day', region: null }] }
+    let cases: [PayDayRule, string][] = [
+      [{ kind: 'last-working-day', offset: 3 }, '2027-03-26'],
+      [{ kind: 'last-weekday', weekday: 4, roll: 'earlier' }, '2027-03-24'],
+      [{ kind: 'last-weekday', weekday: 4, roll: 'later' }, '2027-03-26'],
+      [{ kind: 'fixed-date', day: 25, roll: 'earlier' }, '2027-03-24'],
+      [{ kind: 'next-period-first-working-day', offset: 1 }, '2027-04-02'],
+    ]
+
+    for (let [payDayRule, payDay] of cases) {
+      let { db, payroll, generate } = await setUpMonthlyPayroll(t, { calendars, payDayRule })
+
+      await generate({ start: '2027-03-01', end: '2027-03-31' })
+
+      let payRuns = await listPayRuns(db, payroll.id)
+      assert.deepEqual(
+        payRuns.map((payRun) => [payRun.payPeriod.label, payRun.schedule?.payDay]),
+        [['March 2027', payDay]],
+        payDayRule.kind,
+      )
+    }
+  })
+
+  it("keeps December's pay run in December when it is paid in the new year", async (t) => {
+    let { db, holidays, payroll, generate } = await setUpMonthlyPayroll(t, {
+      calendars: { 'GB 2027': [], 'GB 2028': [{ date: '2028-01-03', name: 'New Year', region: null }] },
+      payDayRule: { kind: 'next-period-first-working-day', offset: 0 },
+    })
+
+    let result = await generate({ start: '2027-12-01', end: '2027-12-31' })
+
+    assert.deepEqual(result, { generated: true })
+    let payRuns = await listPayRuns(db, payroll.id)
+    assert.deepEqual(
+      payRuns.map((payRun) => [payRun.payPeriod.label, payRun.schedule?.payDay]),
+      [['December 2027', '2028-01-04']],
+    )
+    assert.deepEqual(holidays.requests, ['GB 2027', 'GB 2028'])
+  })
+
+  it('uses the previous year\'s public holidays when January rolls back into December', async (t) => {
+    let { db, payroll, generate } = await setUpMonthlyPayroll(t, {
+      // Fri 1 Jan 2027 is a holiday, and so is Thu 31 Dec 2026.
+      calendars: {
+        'GB 2026': [{ date: '2026-12-31', name: 'Year End', region: null }],
+        'GB 2027': [{ date: '2027-01-01', name: 'New Year', region: null }],
+      },
+      payDayRule: { kind: 'fixed-date', day: 1, roll: 'earlier' },
+    })
+
+    await generate({ start: '2027-01-01', end: '2027-01-31' })
+
+    let [payRun] = await listPayRuns(db, payroll.id)
+    assert.equal(payRun.payPeriod.label, 'January 2027')
+    assert.equal(payRun.schedule?.payDay, '2026-12-30')
+  })
+
+  it('blocks generation when the year a pay day lands in has no holiday data', async (t) => {
+    let { db, payroll, generate } = await setUpMonthlyPayroll(t, {
+      calendars: { 'GB 2027': [] },
+      payDayRule: { kind: 'next-period-first-working-day', offset: 0 },
+    })
+
+    let result = await generate({ start: '2027-12-01', end: '2027-12-31' })
 
     assert.deepEqual(result, {
       generated: false,

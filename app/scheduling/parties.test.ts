@@ -45,7 +45,7 @@ describe('parties', () => {
       legalEntityId: legalEntity.id,
       name: 'Monthly salaried',
       payFrequency: 'monthly',
-      payDayRule: { kind: 'last-working-day' },
+      payDayRule: { kind: 'last-working-day', offset: 0 },
     })
 
     let found = await findLegalEntity(db, legalEntity.id)
