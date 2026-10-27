@@ -55,6 +55,7 @@ export async function generateSchedules(
   )
   if (missingHolidayCalendars.length > 0) return { generated: false, missingHolidayCalendars }
 
+  // Pay day always follows the legal entity's location.
   let isWorkingDay = await loadWorkingDays(db, legalEntity.location, years)
 
   await db.transaction(async (tx) => {

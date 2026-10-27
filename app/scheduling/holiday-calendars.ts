@@ -7,6 +7,7 @@ import type { CalendarDate } from './calendar-date.ts'
 import type { HolidaySource, SourcedPublicHoliday } from './holiday-source.ts'
 import type { Location } from './parties.ts'
 import { isWorkingWeekDay } from './working-days.ts'
+import { findWorkingWeek } from './working-weeks.ts'
 
 // A country and year whose holiday calendar the holiday source could not supply.
 export interface MissingHolidayCalendar {
@@ -75,6 +76,7 @@ export async function loadWorkingDays(
   location: Location,
   years: number[],
 ): Promise<(date: CalendarDate) => boolean> {
+  let workingWeek = await findWorkingWeek(db, location.country)
   let entries = await resolveHolidayCalendar(db, location, years)
   let isPublicHoliday = (date: CalendarDate) => {
     let status = entries.get(date)?.status
@@ -83,7 +85,7 @@ export async function loadWorkingDays(
 
   return (date) => {
     if (!years.includes(yearOf(date))) throw new Error(`Working days for ${date} were not loaded`)
-    return isWorkingWeekDay(date) && !isPublicHoliday(date)
+    return isWorkingWeekDay(workingWeek, date) && !isPublicHoliday(date)
   }
 }
 

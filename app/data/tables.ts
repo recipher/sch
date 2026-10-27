@@ -101,3 +101,14 @@ export const holidayCalendarEdits = table({
     created_at: c.integer(),
   },
 })
+
+// days holds the working week's day names in week order, comma-separated.
+export const workingWeeks = table({
+  name: 'working_weeks',
+  primaryKey: 'country',
+  columns: {
+    country: c.text(),
+    days: c.text(),
+    updated_at: c.integer(),
+  },
+})

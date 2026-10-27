@@ -33,7 +33,11 @@ export function LegalEntityPage(handle: Handle<LegalEntityPageProps>) {
         ]}
       >
         <p>
-          Location: {formatLocation(legalEntity.location)} ·{' '}
+          Location:{' '}
+          <a class={linkClass} href={routes.countries.show.href({ country: legalEntity.location.country })}>
+            {formatLocation({ country: legalEntity.location.country })}
+          </a>
+          {legalEntity.location.region && ` (${legalEntity.location.region})`} ·{' '}
           <a class={linkClass} href={holidayCalendarHref(legalEntity.location, currentYear())}>
             Holiday calendar
           </a>

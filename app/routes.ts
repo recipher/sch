@@ -28,4 +28,8 @@ export const routes = route({
     show: get('/payrolls/:payrollId'),
     generate: post('/payrolls/:payrollId/generate'),
   },
+  countries: {
+    show: get('/countries/:country'),
+    updateWorkingWeek: post('/countries/:country/working-week'),
+  },
 })
