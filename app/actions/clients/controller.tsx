@@ -5,11 +5,20 @@ import { createController } from 'remix/router'
 
 import { requireUser } from '../../middleware/auth.ts'
 import { routes } from '../../routes.ts'
-import { createClient, createLegalEntity, findClient, listClients } from '../../scheduling/parties.ts'
+import {
+  addLocation,
+  createClient,
+  createLegalEntity,
+  findClient,
+  listClients,
+  removeLocation,
+} from '../../scheduling/parties.ts'
 import { readText } from '../../ui/form-field.tsx'
+import { describeLocationRefusal, readLocationValues } from '../../ui/locations.tsx'
+import { locationForm, nameForm } from '../form-schema.ts'
 import { NotFoundPage } from '../not-found-page.tsx'
 import { ClientsPage } from './index-page.tsx'
-import { clientForm, legalEntityForm } from './schema.ts'
+import { legalEntityForm } from './schema.ts'
 import { ClientPage } from './show-page.tsx'
 
 export default createController(routes.clients, {
@@ -20,7 +29,7 @@ export default createController(routes.clients, {
       return context.render(<ClientsPage csrfToken={getCsrfToken(context)} clients={clients} />)
     },
     async create(context) {
-      let parsed = s.parseSafe(clientForm, context.formData)
+      let parsed = s.parseSafe(nameForm, context.formData)
       if (!parsed.success) {
         let clients = await listClients(context.db)
         return context.render(
@@ -71,6 +80,49 @@ export default createController(routes.clients, {
         location: { country, region },
       })
       return redirect(routes.legalEntities.show.href({ legalEntityId: legalEntity.id }), 303)
+    },
+    async addLocation(context) {
+      let client = await findClient(context.db, context.params.clientId)
+      if (!client) return context.render(<NotFoundPage what="client" />, { status: 404 })
+
+      let parsed = s.parseSafe(locationForm, context.formData)
+      let result = parsed.success ? await addLocation(context.db, { role: 'client', id: client.id }, parsed.value) : null
+      if (!result?.ok) {
+        return context.render(
+          <ClientPage
+            csrfToken={getCsrfToken(context)}
+            client={client}
+            location={readLocationValues(context.formData)}
+            locationIssues={parsed.success ? undefined : parsed.issues}
+            locationError={result ? describeLocationRefusal(result.reason, 'client') : undefined}
+          />,
+          { status: 400 },
+        )
+      }
+
+      return redirect(routes.clients.show.href({ clientId: client.id }), 303)
+    },
+    async removeLocation(context) {
+      let client = await findClient(context.db, context.params.clientId)
+      if (!client) return context.render(<NotFoundPage what="client" />, { status: 404 })
+
+      let result = await removeLocation(
+        context.db,
+        { role: 'client', id: client.id },
+        context.params.locationId,
+      )
+      if (!result.ok) {
+        return context.render(
+          <ClientPage
+            csrfToken={getCsrfToken(context)}
+            client={client}
+            locationError={describeLocationRefusal(result.reason, 'client')}
+          />,
+          { status: 400 },
+        )
+      }
+
+      return redirect(routes.clients.show.href({ clientId: client.id }), 303)
     },
   },
 })

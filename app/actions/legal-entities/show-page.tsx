@@ -2,10 +2,10 @@ import type { Handle } from 'remix/component'
 import type { Issue } from 'remix/data-schema'
 
 import { routes } from '../../routes.ts'
-import type { Client, LegalEntity } from '../../scheduling/parties.ts'
+import type { Client, LegalEntity, Provider, ServiceCentre } from '../../scheduling/parties.ts'
 import type { Payroll } from '../../scheduling/payrolls.ts'
 import { AppPage, emptyClass, Section, tableClass } from '../../ui/app-page.tsx'
-import { TextField } from '../../ui/form-field.tsx'
+import { SelectField, TextField } from '../../ui/form-field.tsx'
 import { formatLocation, formatPayDayRule, formatPayFrequency } from '../../ui/format.ts'
 import { alertClass, buttonClass, fieldClass, formClass, inputClass, labelClass, linkClass } from '../../ui/page-card.tsx'
 
@@ -14,13 +14,17 @@ export interface LegalEntityPageProps {
   client: Client
   legalEntity: LegalEntity
   payrolls: Payroll[]
+  providers: Provider[]
+  serviceCentres: ServiceCentre[]
   name?: string
+  defaultsError?: string
   issues?: readonly Issue[]
 }
 
 export function LegalEntityPage(handle: Handle<LegalEntityPageProps>) {
   return () => {
-    let { csrfToken, client, legalEntity, payrolls, name, issues = [] } = handle.props
+    let { csrfToken, client, legalEntity, payrolls, providers, serviceCentres, name, defaultsError, issues = [] } =
+      handle.props
 
     return (
       <AppPage
@@ -31,6 +35,38 @@ export function LegalEntityPage(handle: Handle<LegalEntityPageProps>) {
         ]}
       >
         <p>Location: {formatLocation(legalEntity.location)}</p>
+        <Section title="Default provider and service centre">
+          <p class={emptyClass}>Payrolls use these unless they choose their own.</p>
+          {defaultsError && (
+            <p role="alert" class={alertClass}>
+              {defaultsError}
+            </p>
+          )}
+          <form
+            method="post"
+            action={routes.legalEntities.assignDefaults.href({ legalEntityId: legalEntity.id })}
+            class={formClass}
+          >
+            <input type="hidden" name="_csrf" value={csrfToken} />
+            <SelectField
+              id="default-provider"
+              name="providerId"
+              label="Default provider"
+              options={[{ value: '', label: 'None' }, ...providers.map(toOption)]}
+              value={legalEntity.defaultProviderId ?? ''}
+            />
+            <SelectField
+              id="default-service-centre"
+              name="serviceCentreId"
+              label="Default service centre"
+              options={[{ value: '', label: 'None' }, ...serviceCentres.map(toOption)]}
+              value={legalEntity.defaultServiceCentreId ?? ''}
+            />
+            <button type="submit" class={buttonClass}>
+              Save defaults
+            </button>
+          </form>
+        </Section>
         <Section title="Payrolls">
           {payrolls.length === 0 ? (
             <p class={emptyClass}>No payrolls yet.</p>
@@ -96,4 +132,8 @@ export function LegalEntityPage(handle: Handle<LegalEntityPageProps>) {
       </AppPage>
     )
   }
+}
+
+function toOption(party: { id: string; name: string }) {
+  return { value: party.id, label: party.name }
 }
