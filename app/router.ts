@@ -15,6 +15,8 @@ import holidayCalendarsController from './actions/holiday-calendars/controller.t
 import legalEntitiesController from './actions/legal-entities/controller.tsx'
 import loginController from './actions/login/controller.tsx'
 import payrollsController from './actions/payrolls/controller.tsx'
+import providersController from './actions/providers/controller.tsx'
+import serviceCentresController from './actions/service-centres/controller.tsx'
 import signupController from './actions/signup/controller.tsx'
 import { assets } from './assets.ts'
 import { loadCurrentUser } from './middleware/auth.ts'
@@ -52,6 +54,8 @@ export function createAppRouter(options: AppRouterOptions) {
   router.map(routes.legalEntities, legalEntitiesController)
   router.map(routes.holidayCalendars, holidayCalendarsController)
   router.map(routes.payrolls, payrollsController)
+  router.map(routes.providers, providersController)
+  router.map(routes.serviceCentres, serviceCentresController)
 
   return router
 }

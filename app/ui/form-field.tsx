@@ -49,3 +49,32 @@ export function readText(formData: FormData, name: string): string {
   let value = formData.get(name)
   return typeof value === 'string' ? value : ''
 }
+
+export interface SelectFieldProps {
+  id: string
+  name: string
+  label: string
+  options: { value: string; label: string }[]
+  value?: string
+}
+
+export function SelectField(handle: Handle<SelectFieldProps>) {
+  return () => {
+    let { id, name, label, options, value = '' } = handle.props
+
+    return (
+      <div class={fieldClass}>
+        <label htmlFor={id} class={labelClass}>
+          {label}
+        </label>
+        <select id={id} name={name} class={inputClass}>
+          {options.map((option) => (
+            <option key={option.value} value={option.value} selected={option.value === value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    )
+  }
+}

@@ -13,10 +13,29 @@ export const routes = route({
     create: post('/clients'),
     show: get('/clients/:clientId'),
     createLegalEntity: post('/clients/:clientId/legal-entities'),
+    addLocation: post('/clients/:clientId/locations'),
+    removeLocation: post('/clients/:clientId/locations/:locationId/remove'),
   },
   legalEntities: {
     show: get('/legal-entities/:legalEntityId'),
     createPayroll: post('/legal-entities/:legalEntityId/payrolls'),
+    assignDefaults: post('/legal-entities/:legalEntityId/defaults'),
+  },
+  providers: {
+    index: get('/providers'),
+    create: post('/providers'),
+    show: get('/providers/:providerId'),
+    rename: post('/providers/:providerId'),
+    addLocation: post('/providers/:providerId/locations'),
+    removeLocation: post('/providers/:providerId/locations/:locationId/remove'),
+  },
+  serviceCentres: {
+    index: get('/service-centres'),
+    create: post('/service-centres'),
+    show: get('/service-centres/:serviceCentreId'),
+    rename: post('/service-centres/:serviceCentreId'),
+    addLocation: post('/service-centres/:serviceCentreId/locations'),
+    removeLocation: post('/service-centres/:serviceCentreId/locations/:locationId/remove'),
   },
   holidayCalendars: {
     show: get('/holiday-calendars/:country'),
@@ -27,5 +46,6 @@ export const routes = route({
   payrolls: {
     show: get('/payrolls/:payrollId'),
     generate: post('/payrolls/:payrollId/generate'),
+    assignParties: post('/payrolls/:payrollId/parties'),
   },
 })

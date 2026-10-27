@@ -3,11 +3,11 @@ import type { Issue } from 'remix/data-schema'
 
 import { routes } from '../../routes.ts'
 import type { MissingHolidayCalendar } from '../../scheduling/holiday-calendars.ts'
-import type { Client, LegalEntity } from '../../scheduling/parties.ts'
-import type { Payroll } from '../../scheduling/payrolls.ts'
+import type { Client, LegalEntity, Provider, ServiceCentre } from '../../scheduling/parties.ts'
+import type { EffectiveParties, EffectiveParty, Payroll } from '../../scheduling/payrolls.ts'
 import type { PayRun } from '../../scheduling/schedules.ts'
 import { AppPage, emptyClass, Section, tableClass } from '../../ui/app-page.tsx'
-import { TextField } from '../../ui/form-field.tsx'
+import { SelectField, TextField } from '../../ui/form-field.tsx'
 import { formatDate, formatLocation, formatPayDayRule, formatPayFrequency, formatScheduleStatus } from '../../ui/format.ts'
 import { alertClass, buttonClass, formClass, linkClass } from '../../ui/page-card.tsx'
 import { holidayCalendarHref } from '../holiday-calendars/href.ts'
@@ -18,6 +18,10 @@ export interface PayrollPageProps {
   legalEntity: LegalEntity
   payroll: Payroll
   payRuns: PayRun[]
+  effectiveParties: EffectiveParties
+  providers: Provider[]
+  serviceCentres: ServiceCentre[]
+  partiesError?: string
   range?: { start: string; end: string }
   issues?: readonly Issue[]
   missingHolidayCalendars?: MissingHolidayCalendar[]
@@ -25,7 +29,20 @@ export interface PayrollPageProps {
 
 export function PayrollPage(handle: Handle<PayrollPageProps>) {
   return () => {
-    let { csrfToken, client, legalEntity, payroll, payRuns, range, issues = [], missingHolidayCalendars = [] } = handle.props
+    let {
+      csrfToken,
+      client,
+      legalEntity,
+      payroll,
+      payRuns,
+      effectiveParties,
+      providers,
+      serviceCentres,
+      partiesError,
+      range,
+      issues = [],
+      missingHolidayCalendars = [],
+    } = handle.props
 
     return (
       <AppPage
@@ -39,6 +56,39 @@ export function PayrollPage(handle: Handle<PayrollPageProps>) {
         <p>
           {formatPayFrequency(payroll.payFrequency)} · {formatPayDayRule(payroll.payDayRule)}
         </p>
+        <Section title="Provider and service centre">
+          <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+            <dt class="text-fg-muted">Provider</dt>
+            <dd>{formatEffectiveParty(effectiveParties.provider, legalEntity)}</dd>
+            <dt class="text-fg-muted">Service centre</dt>
+            <dd>{formatEffectiveParty(effectiveParties.serviceCentre, legalEntity)}</dd>
+          </dl>
+          {partiesError && (
+            <p role="alert" class={alertClass}>
+              {partiesError}
+            </p>
+          )}
+          <form method="post" action={routes.payrolls.assignParties.href({ payrollId: payroll.id })} class={formClass}>
+            <input type="hidden" name="_csrf" value={csrfToken} />
+            <SelectField
+              id="payroll-provider"
+              name="providerId"
+              label="Provider"
+              options={[{ value: '', label: "Use the legal entity's" }, ...providers.map(toOption)]}
+              value={payroll.providerId ?? ''}
+            />
+            <SelectField
+              id="payroll-service-centre"
+              name="serviceCentreId"
+              label="Service centre"
+              options={[{ value: '', label: "Use the legal entity's" }, ...serviceCentres.map(toOption)]}
+              value={payroll.serviceCentreId ?? ''}
+            />
+            <button type="submit" class={buttonClass}>
+              Save
+            </button>
+          </form>
+        </Section>
         <Section title="Pay runs">
           {payRuns.length === 0 ? (
             <p class={emptyClass}>No schedules generated yet.</p>
@@ -100,4 +150,16 @@ export function PayrollPage(handle: Handle<PayrollPageProps>) {
       </AppPage>
     )
   }
+}
+
+// "PayCo (inherited from Acme UK Ltd)", "Bureau One (overridden for this payroll)" or "None".
+function formatEffectiveParty(effective: EffectiveParty<{ name: string }>, legalEntity: LegalEntity): string {
+  if (!effective.party) return 'None'
+  return effective.source === 'inherited'
+    ? `${effective.party.name} (inherited from ${legalEntity.name})`
+    : `${effective.party.name} (overridden for this payroll)`
+}
+
+function toOption(party: { id: string; name: string }) {
+  return { value: party.id, label: party.name }
 }

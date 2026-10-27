@@ -26,9 +26,20 @@ export function AppPage(handle: Handle<AppPageProps>) {
           <a href={routes.clients.index.href()} class="font-bold tracking-widest uppercase hover:text-brand">
             Scheduler
           </a>
-          <a href={routes.account.href()} class={linkClass}>
-            Your account
-          </a>
+          <nav aria-label="Main" class="flex items-center gap-4">
+            <a href={routes.clients.index.href()} class={linkClass}>
+              Clients
+            </a>
+            <a href={routes.providers.index.href()} class={linkClass}>
+              Providers
+            </a>
+            <a href={routes.serviceCentres.index.href()} class={linkClass}>
+              Service centres
+            </a>
+            <a href={routes.account.href()} class={linkClass}>
+              Your account
+            </a>
+          </nav>
         </header>
         <main class="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pb-12 sm:px-6">
           {crumbs.length > 0 && (

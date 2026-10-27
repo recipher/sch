@@ -30,6 +30,38 @@ export const legalEntities = table({
     name: c.text(),
     country: c.text(),
     region: c.text().nullable(),
+    default_provider_id: c.text().nullable(),
+    default_service_centre_id: c.text().nullable(),
+    created_at: c.integer(),
+  },
+})
+
+export const providers = table({
+  name: 'providers',
+  columns: {
+    id: c.text(),
+    name: c.text(),
+    created_at: c.integer(),
+  },
+})
+
+export const serviceCentres = table({
+  name: 'service_centres',
+  columns: {
+    id: c.text(),
+    name: c.text(),
+    created_at: c.integer(),
+  },
+})
+
+export const partyLocations = table({
+  name: 'party_locations',
+  columns: {
+    id: c.text(),
+    party_role: c.enum(['client', 'provider', 'service-centre'] as const),
+    party_id: c.text(),
+    country: c.text(),
+    region: c.text().nullable(),
     created_at: c.integer(),
   },
 })
@@ -46,6 +78,8 @@ export const payrolls = table({
     pay_day_weekday: c.integer().nullable(),
     pay_day_of_month: c.integer().nullable(),
     pay_day_roll: c.enum(['earlier', 'later'] as const).nullable(),
+    provider_id: c.text().nullable(),
+    service_centre_id: c.text().nullable(),
     created_at: c.integer(),
   },
 })
