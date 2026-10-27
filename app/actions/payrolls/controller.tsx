@@ -39,7 +39,19 @@ export default createController(routes.payrolls, {
         )
       }
 
-      await generateSchedules(context.db, page.payroll.id, parsed.value)
+      let result = await generateSchedules(context.db, context.holidaySource, page.payroll.id, parsed.value)
+      if (!result.generated) {
+        return context.render(
+          <PayrollPage
+            csrfToken={getCsrfToken(context)}
+            {...page}
+            range={parsed.value}
+            missingHolidayCalendars={result.missingHolidayCalendars}
+          />,
+          { status: 422 },
+        )
+      }
+
       return redirect(routes.payrolls.show.href({ payrollId: page.payroll.id }), 303)
     },
   },

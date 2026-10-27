@@ -11,6 +11,7 @@ import type { SessionStorage } from 'remix/session'
 
 import clientsController from './actions/clients/controller.tsx'
 import controller from './actions/controller.tsx'
+import holidayCalendarsController from './actions/holiday-calendars/controller.tsx'
 import legalEntitiesController from './actions/legal-entities/controller.tsx'
 import loginController from './actions/login/controller.tsx'
 import payrollsController from './actions/payrolls/controller.tsx'
@@ -18,10 +19,13 @@ import signupController from './actions/signup/controller.tsx'
 import { assets } from './assets.ts'
 import { loadCurrentUser } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
+import { loadHolidaySource } from './middleware/holiday-source.ts'
 import { routes } from './routes.ts'
+import type { HolidaySource } from './scheduling/holiday-source.ts'
 
 export interface AppRouterOptions {
   db: Database
+  holidaySource: HolidaySource
   sessionCookie: Cookie
   sessionStorage: SessionStorage
 }
@@ -33,6 +37,7 @@ export function createAppRouter(options: AppRouterOptions) {
       staticFiles('./public', { index: false }),
       session(options.sessionCookie, options.sessionStorage),
       loadDatabase(options.db),
+      loadHolidaySource(options.holidaySource),
       formData(),
       csrf(),
       loadCurrentUser(options.db),
@@ -45,6 +50,7 @@ export function createAppRouter(options: AppRouterOptions) {
   router.map(routes.login, loginController)
   router.map(routes.clients, clientsController)
   router.map(routes.legalEntities, legalEntitiesController)
+  router.map(routes.holidayCalendars, holidayCalendarsController)
   router.map(routes.payrolls, payrollsController)
 
   return router
