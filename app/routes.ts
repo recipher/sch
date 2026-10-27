@@ -48,4 +48,8 @@ export const routes = route({
     generate: post('/payrolls/:payrollId/generate'),
     assignParties: post('/payrolls/:payrollId/parties'),
   },
+  countries: {
+    show: get('/countries/:country'),
+    updateWorkingWeek: post('/countries/:country/working-week'),
+  },
 })

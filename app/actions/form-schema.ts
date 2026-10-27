@@ -10,7 +10,7 @@ export const requiredName = s
 export const country = s
   .string()
   .transform((value) => value.trim().toUpperCase())
-  .refine((value) => /^[A-Z]{2}$/.test(value), 'Enter a two-letter country code, such as GB')
+  .refine(isCountryCode, 'Enter a two-letter country code, such as GB')
 
 export const region = s
   .defaulted(s.string(), '')
@@ -43,3 +43,8 @@ export const partyAssignmentForm = f.object({
   providerId: f.field(optionalId),
   serviceCentreId: f.field(optionalId),
 })
+
+// Two capital letters, as legal entity locations store them, such as GB.
+export function isCountryCode(value: string): boolean {
+  return /^[A-Z]{2}$/.test(value)
+}

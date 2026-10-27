@@ -5,10 +5,13 @@ import type { CalendarDate } from './calendar-date.ts'
 import { choosePayDay, payPeriod } from './pay-periods.ts'
 import type { PayDayRule } from './pay-periods.ts'
 import { isWorkingWeekDay } from './working-days.ts'
+import type { WorkingWeek } from './working-weeks.ts'
+
+const mondayToFriday: WorkingWeek = { country: 'GB', days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'] }
 
 // Monday to Friday, less the given public holidays.
 function workingDaysExcept(...publicHolidays: CalendarDate[]) {
-  return (date: CalendarDate) => isWorkingWeekDay(date) && !publicHolidays.includes(date)
+  return (date: CalendarDate) => isWorkingWeekDay(mondayToFriday, date) && !publicHolidays.includes(date)
 }
 
 function payDayFor(month: string, rule: PayDayRule, publicHolidays: CalendarDate[] = []) {

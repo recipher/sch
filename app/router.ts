@@ -11,6 +11,7 @@ import type { SessionStorage } from 'remix/session'
 
 import clientsController from './actions/clients/controller.tsx'
 import controller from './actions/controller.tsx'
+import countriesController from './actions/countries/controller.tsx'
 import holidayCalendarsController from './actions/holiday-calendars/controller.tsx'
 import legalEntitiesController from './actions/legal-entities/controller.tsx'
 import loginController from './actions/login/controller.tsx'
@@ -56,6 +57,7 @@ export function createAppRouter(options: AppRouterOptions) {
   router.map(routes.payrolls, payrollsController)
   router.map(routes.providers, providersController)
   router.map(routes.serviceCentres, serviceCentresController)
+  router.map(routes.countries, countriesController)
 
   return router
 }

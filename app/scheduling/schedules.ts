@@ -47,6 +47,7 @@ export async function generateSchedules(
   let payPeriods = payPeriodsStartingIn(payroll.payFrequency, range)
   if (payPeriods.length === 0) return { generated: true }
 
+  // Pay day always follows the legal entity's location.
   let payDays = await choosePayDays(db, holidaySource, legalEntity.location, payroll.payDayRule, payPeriods)
   if (!payDays.chosen) return { generated: false, missingHolidayCalendars: payDays.missingHolidayCalendars }
 
